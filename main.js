@@ -24,10 +24,10 @@ export function init() {
   player.requestDestroyBlock = () => destroyBlock();
   player.onBlockSelect = (type) => {
     selectedBlockType = type;
-    updateBlockSelectorUI();
+    requestAnimationFrame(() => updateBlockSelectorUI());
   };
 
-  updateBlockSelectorUI();
+  requestAnimationFrame(() => updateBlockSelectorUI());
 
   setupEventListeners();
 

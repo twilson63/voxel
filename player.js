@@ -67,15 +67,10 @@ class PlayerController {
                 }
                 break;
             case 'KeyQ':
-                if (this.requestDestroyBlock) {
-                    console.log('Q pressed - destroy block');
-                    this.requestDestroyBlock();
-                }
+                if (this.requestDestroyBlock) this.requestDestroyBlock();
                 break;
             case 'KeyE':
-                if (this.requestPlaceBlock) {
-                    this.requestPlaceBlock();
-                }
+                if (this.requestPlaceBlock) this.requestPlaceBlock();
                 break;
             case 'Digit1':
             case 'Digit2':
@@ -83,13 +78,8 @@ class PlayerController {
                 if (this.onBlockSelect) {
                     const types = ['grass', 'dirt', 'stone'];
                     const idx = parseInt(event.code.replace('Digit', '')) - 1;
-                    if (types[idx]) {
-                        this.onBlockSelect(types[idx]);
-                    }
+                    if (types[idx]) this.onBlockSelect(types[idx]);
                 }
-                break;
-        }
-    }
                 break;
         }
     }
