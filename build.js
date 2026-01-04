@@ -15,7 +15,7 @@ async function build() {
     cpSync('public', 'dist', { recursive: true });
   }
 
-  // Bundle JS (minified)
+  // Bundle JS with Three.js included
   await esbuild.build({
     entryPoints: ['main.js'],
     bundle: true,
@@ -24,16 +24,17 @@ async function build() {
     minify: true,
     outfile: 'dist/bundle.js',
     sourcemap: true,
-    external: ['three', 'three/*'],
+    external: [],
   });
 
   // Read source HTML and bundled JS
   const htmlTemplate = readFileSync('index.html', 'utf-8');
   const bundle = readFileSync('dist/bundle.js', 'utf-8');
 
-  // Inline bundle into HTML
+  // Remove importmap and inline bundle with Three.js
   const bundleWithCall = bundle.replace(/export\{.*?\};$/m, '');
   const htmlWithInlineJS = htmlTemplate
+    .replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, '')
     .replace(/<script type="module">\s*import \{ init \} from '\.\/main\.js';[\s\S]*?<\/script>\s*/s, '')
     .replace('</body>', `  <script type="module">\n${bundleWithCall}\nme();\n  </script>\n</body>`);
 
@@ -45,7 +46,7 @@ async function build() {
   rmSync('dist/bundle.js.map');
 
   console.log('✓ Built dist/index.html');
-  console.log('✓ Minified and inlined local JS');
+  console.log('✓ Minified and inlined local JS + Three.js');
   console.log('✓ Copied assets from public/');
 }
 

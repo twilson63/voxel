@@ -8,5 +8,8 @@
     "serve": "python3 -m http.server 8080",
     "serve:dist": "npm run build && python3 -m http.server 8080 --directory dist",
     "deploy": "node deploy.js"
+  },
+  "dependencies": {
+    "three": "^0.182.0"
   }
 }

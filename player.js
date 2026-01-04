@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PointerLockControls } from 'three/addons/controls/PointerLockControls';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { WATER_LEVEL } from './voxel-world.js';
 
 const PLAYER_HEIGHT = 1.8;
