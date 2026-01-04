@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, existsSync } from 'fs';
 import * as esbuild from 'esbuild';
+import { minify } from 'html-minifier';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -32,14 +33,27 @@ async function build() {
   const bundle = readFileSync('dist/bundle.js', 'utf-8');
 
   // Remove importmap and inline bundle with Three.js
-  const bundleWithCall = bundle.replace(/export\{.*?\};$/m, '');
+  const bundleMinified = bundle.replace(/export\{.*?\};$/m, '').replace(/\n/g, '').replace(/\s{2,}/g, ' ');
   const htmlWithInlineJS = htmlTemplate
     .replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, '')
     .replace(/<script type="module">\s*import \{ init \} from '\.\/main\.js';[\s\S]*?<\/script>\s*/s, '')
-    .replace('</body>', `  <script type="module">\n${bundleWithCall}\nme();\n  </script>\n</body>`);
+    .replace('</body>', `<script type="module">${bundleMinified}me();</script></body>`);
+
+  // Minify HTML aggressively with html-minifier
+  const minifiedHTML = minify(htmlWithInlineJS, {
+    collapseWhitespace: true,
+    removeComments: true,
+    removeOptionalTags: true,
+    removeRedundantAttributes: true,
+    removeScriptTypeAttributes: true,
+    removeTagWhitespace: true,
+    minifyCSS: true,
+    minifyJS: true,
+    ignoreCustomFragments: [/<script type="module">[\s\S]*?<\/script>/]
+  });
 
   // Write dist/index.html
-  writeFileSync('dist/index.html', htmlWithInlineJS);
+  writeFileSync('dist/index.html', minifiedHTML);
 
   // Cleanup temp files
   rmSync('dist/bundle.js');

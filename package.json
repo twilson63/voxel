@@ -10,6 +10,7 @@
     "deploy": "node deploy.js"
   },
   "dependencies": {
-    "three": "^0.182.0"
+    "html-minifier": "^4.0.0",
+    "three": "^0.160.0"
   }
 }
