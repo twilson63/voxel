@@ -16,7 +16,7 @@ async function deploy() {
   const base64 = Buffer.from(html).toString('base64');
 
   console.log('Deploying to ZenBin...');
-  const response = await fetch('https://zenbin.onrender.com/v1/pages/vox-v1', {
+  const response = await fetch('https://zenbin.onrender.com/v1/pages/vox-v2', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -27,7 +27,7 @@ async function deploy() {
   });
 
   if (response.status === 409) {
-    console.error('Page ID vox-v1 is already taken on ZenBin');
+    console.error('Page ID vox-v2 is already taken on ZenBin');
     process.exit(1);
   }
 
