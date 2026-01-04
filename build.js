@@ -39,17 +39,16 @@ async function build() {
     .replace(/<script type="module">\s*import \{ init \} from '\.\/main\.js';[\s\S]*?<\/script>\s*/s, '')
     .replace('</body>', `<script type="module">${bundleMinified}me();</script></body>`);
 
-  // Minify HTML aggressively with html-minifier
+  // Minify HTML with html-minifier (preserve module scripts)
   const minifiedHTML = minify(htmlWithInlineJS, {
     collapseWhitespace: true,
     removeComments: true,
     removeOptionalTags: true,
     removeRedundantAttributes: true,
-    removeScriptTypeAttributes: true,
     removeTagWhitespace: true,
     minifyCSS: true,
-    minifyJS: true,
-    ignoreCustomFragments: [/<script type="module">[\s\S]*?<\/script>/]
+    minifyJS: false, // JS already minified by esbuild
+    ignoreCustomFragments: [/<script[^>]*>[\s\S]*?<\/script>/gi]
   });
 
   // Write dist/index.html
