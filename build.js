@@ -12,21 +12,19 @@ async function build() {
   await esbuild.build({
     entryPoints: ['main.js'],
     bundle: true,
-    format: 'esm',
+    format: 'iife',
     platform: 'browser',
     minify: true,
     outfile: 'dist/bundle.js',
     sourcemap: false,
     external: [],
+    globalName: 'VoxelApp',
   });
 
-  // Read bundle
+  // Read bundle - IIFE format doesn't have exports, just remove sourcemap
   const bundleBytes = readFileSync('dist/bundle.js');
-  
-  // Remove export and sourcemap
   const bundleStr = bundleBytes.toString('utf8');
   const bundleClean = bundleStr
-    .replace(/export\{.*?\};?$/m, '')
     .replace(/\/\/#\s*sourceMappingURL=.*$/gm, '');
   const bundleCleanBytes = Buffer.from(bundleClean, 'utf8');
 
@@ -48,10 +46,11 @@ async function build() {
   console.log(`beforeBody size: ${beforeBody.length}`);
   console.log(`afterBody starts with: ${afterBody.slice(0, 20)}`);
   
-  // Create the script tag content
+  // Create the script tag content - IIFE format creates global
   const scriptOpen = Buffer.from('<script type="module">', 'utf8');
   const scriptClose = Buffer.from('</script>', 'utf8');
-  const meCall = Buffer.from('me();', 'utf8');
+  // IIFE exposes init as VoxelApp.init
+  const meCall = Buffer.from('VoxelApp.init();', 'utf8');
   
   // Assemble: beforeBody + scriptOpen + bundle + meCall + scriptClose + afterBody
   const resultBytes = Buffer.concat([
