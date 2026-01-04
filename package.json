@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "serve": "python3 -m http.server 8080",
+    "serve:dist": "npm run build && python3 -m http.server 8080 --directory dist"
+  }
+}
