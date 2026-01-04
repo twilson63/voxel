@@ -1,9 +1,5 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, existsSync } from 'fs';
 import * as esbuild from 'esbuild';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function build() {
   rmSync('dist', { force: true, recursive: true });
@@ -20,38 +16,64 @@ async function build() {
     platform: 'browser',
     minify: true,
     outfile: 'dist/bundle.js',
-    sourcemap: false,  // Disable sourcemaps
+    sourcemap: false,
     external: [],
   });
 
-  const htmlTemplate = readFileSync('index.html', 'utf-8');
-  const bundle = readFileSync('dist/bundle.js', 'utf-8');
-
-  // Remove export statement and source map reference
-  const bundleMinified = bundle
+  // Read bundle
+  const bundleBytes = readFileSync('dist/bundle.js');
+  
+  // Remove export and sourcemap
+  const bundleStr = bundleBytes.toString('utf8');
+  const bundleClean = bundleStr
     .replace(/export\{.*?\};?$/m, '')
     .replace(/\/\/#\s*sourceMappingURL=.*$/gm, '');
+  const bundleCleanBytes = Buffer.from(bundleClean, 'utf8');
 
-  const htmlWithInlineJS = htmlTemplate
-    .replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, '')
-    .replace(/<script type="module">\s*import \{ init \} from '\.\/main\.js';[\s\S]*?<\/script>\s*/s, '')
-    .replace('</body>', `<script type="module">${bundleMinified}me();</script></body>`);
-
-  // Simple whitespace collapse (line-based to avoid corrupting JS)
-  const lines = htmlWithInlineJS.split('\n');
-  const collapsed = lines.map(l => l.trim()).filter(l => l.length > 0);
-  const minifiedHTML = collapsed.join('');
-
-  writeFileSync('dist/index.html', minifiedHTML);
-
+  // Read template
+  const templateBytes = readFileSync('index.html');
+  
+  // Find </body>
+  const bodyTag = Buffer.from('</body>', 'utf8');
+  const bodyPos = templateBytes.indexOf(bodyTag);
+  
+  console.log(`Template size: ${templateBytes.length}`);
+  console.log(`</body> at position: ${bodyPos}`);
+  
+  // Create pieces
+  const beforeBody = templateBytes.slice(0, bodyPos);
+  const afterBody = templateBytes.slice(bodyPos);
+  // afterBody starts with </body>
+  
+  console.log(`beforeBody size: ${beforeBody.length}`);
+  console.log(`afterBody starts with: ${afterBody.slice(0, 20)}`);
+  
+  // Create the script tag content
+  const scriptOpen = Buffer.from('<script type="module">', 'utf8');
+  const scriptClose = Buffer.from('</script>', 'utf8');
+  const meCall = Buffer.from('me();', 'utf8');
+  
+  // Assemble: beforeBody + scriptOpen + bundle + meCall + scriptClose + afterBody
+  const resultBytes = Buffer.concat([
+    beforeBody,
+    scriptOpen,
+    bundleCleanBytes,
+    meCall,
+    scriptClose,
+    afterBody
+  ]);
+  
+  writeFileSync('dist/index.html', resultBytes);
   rmSync('dist/bundle.js');
 
+  // Verify
+  const resultStr = resultBytes.toString('utf8');
+  const bodyCount = (resultStr.match(/<\/body>/g) || []).length;
+  console.log(`Result size: ${resultBytes.length}`);
+  console.log(`</body> count in result: ${bodyCount}`);
+  
   const stats = require('fs').statSync('dist/index.html');
   console.log(`✓ Built dist/index.html (${Math.round(stats.size / 1024)}KB)`);
-  console.log('✓ Minified and inlined local JS + Three.js');
-  if (existsSync('public')) {
-    console.log('✓ Copied assets from public/');
-  }
 }
 
 build().catch(() => process.exit(1));
