@@ -21,7 +21,7 @@ async function build() {
     globalName: 'VoxelApp',
   });
 
-  // Read bundle - IIFE format doesn't have exports, just remove sourcemap
+  // Read bundle
   const bundleBytes = readFileSync('dist/bundle.js');
   const bundleStr = bundleBytes.toString('utf8');
   const bundleClean = bundleStr
@@ -30,29 +30,32 @@ async function build() {
 
   // Read template
   const templateBytes = readFileSync('index.html');
+  const templateStr = templateBytes.toString('utf8');
+  
+  // Remove importmap and module scripts first (as strings)
+  const templateNoScripts = templateStr
+    .replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, '')
+    .replace(/<script type="module">\s*import \{ init \} from '\.\/main\.js';[\s\S]*?<\/script>\s*/s, '');
+
+  // Convert back to bytes
+  const templateNoScriptsBytes = Buffer.from(templateNoScripts, 'utf8');
   
   // Find </body>
   const bodyTag = Buffer.from('</body>', 'utf8');
-  const bodyPos = templateBytes.indexOf(bodyTag);
+  const bodyPos = templateNoScriptsBytes.indexOf(bodyTag);
   
-  console.log(`Template size: ${templateBytes.length}`);
-  console.log(`</body> at position: ${bodyPos}`);
+  if (bodyPos === -1) {
+    throw new Error('Could not find </body> in template');
+  }
   
-  // Create pieces
-  const beforeBody = templateBytes.slice(0, bodyPos);
-  const afterBody = templateBytes.slice(bodyPos);
-  // afterBody starts with </body>
+  // Create pieces: beforeBody + script + afterBody
+  const beforeBody = templateNoScriptsBytes.slice(0, bodyPos);
+  const afterBody = templateNoScriptsBytes.slice(bodyPos);
   
-  console.log(`beforeBody size: ${beforeBody.length}`);
-  console.log(`afterBody starts with: ${afterBody.slice(0, 20)}`);
-  
-  // Create the script tag content - IIFE format creates global
   const scriptOpen = Buffer.from('<script type="module">', 'utf8');
   const scriptClose = Buffer.from('</script>', 'utf8');
-  // IIFE exposes init as VoxelApp.init
   const meCall = Buffer.from('VoxelApp.init();', 'utf8');
   
-  // Assemble: beforeBody + scriptOpen + bundle + meCall + scriptClose + afterBody
   const resultBytes = Buffer.concat([
     beforeBody,
     scriptOpen,
@@ -68,8 +71,16 @@ async function build() {
   // Verify
   const resultStr = resultBytes.toString('utf8');
   const bodyCount = (resultStr.match(/<\/body>/g) || []).length;
+  const importCount = (resultStr.match(/import \{ init \}/g) || []).length;
+  
   console.log(`Result size: ${resultBytes.length}`);
-  console.log(`</body> count in result: ${bodyCount}`);
+  console.log(`</body> count: ${bodyCount}`);
+  console.log(`import { init } count: ${importCount}`);
+  
+  if (importCount > 0) {
+    console.error('ERROR: import statement still present!');
+    process.exit(1);
+  }
   
   const stats = require('fs').statSync('dist/index.html');
   console.log(`✓ Built dist/index.html (${Math.round(stats.size / 1024)}KB)`);

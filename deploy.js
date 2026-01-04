@@ -16,7 +16,7 @@ async function deploy() {
   const base64 = Buffer.from(html).toString('base64');
 
   console.log('Deploying to ZenBin...');
-  const response = await fetch('https://zenbin.onrender.com/v1/pages/vox-v7', {
+  const response = await fetch('https://zenbin.onrender.com/v1/pages/vox-v8', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
