@@ -20,20 +20,24 @@ async function build() {
     platform: 'browser',
     minify: true,
     outfile: 'dist/bundle.js',
-    sourcemap: true,
+    sourcemap: false,  // Disable sourcemaps
     external: [],
   });
 
   const htmlTemplate = readFileSync('index.html', 'utf-8');
   const bundle = readFileSync('dist/bundle.js', 'utf-8');
 
-  const bundleMinified = bundle.replace(/export\{.*?\};$/m, '');
+  // Remove export statement and source map reference
+  const bundleMinified = bundle
+    .replace(/export\{.*?\};?$/m, '')
+    .replace(/\/\/#\s*sourceMappingURL=.*$/gm, '');
 
   const htmlWithInlineJS = htmlTemplate
     .replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, '')
     .replace(/<script type="module">\s*import \{ init \} from '\.\/main\.js';[\s\S]*?<\/script>\s*/s, '')
     .replace('</body>', `<script type="module">${bundleMinified}me();</script></body>`);
 
+  // Simple whitespace collapse (line-based to avoid corrupting JS)
   const lines = htmlWithInlineJS.split('\n');
   const collapsed = lines.map(l => l.trim()).filter(l => l.length > 0);
   const minifiedHTML = collapsed.join('');
@@ -41,11 +45,13 @@ async function build() {
   writeFileSync('dist/index.html', minifiedHTML);
 
   rmSync('dist/bundle.js');
-  rmSync('dist/bundle.js.map');
 
   const stats = require('fs').statSync('dist/index.html');
   console.log(`✓ Built dist/index.html (${Math.round(stats.size / 1024)}KB)`);
   console.log('✓ Minified and inlined local JS + Three.js');
+  if (existsSync('public')) {
+    console.log('✓ Copied assets from public/');
+  }
 }
 
 build().catch(() => process.exit(1));
