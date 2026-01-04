@@ -4,10 +4,10 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls';
 const PLAYER_HEIGHT = 1.8;
 const PLAYER_WIDTH = 0.6;
 const PLAYER_HALF_WIDTH = PLAYER_WIDTH / 2;
-const GRAVITY = 30.0;
+const GRAVITY = 20.0;
 const DEFAULT_MOVE_SPEED = 8.0;
-const DEFAULT_JUMP_HEIGHT = 5.0;
-const FRICTION = 10.0;
+const DEFAULT_JUMP_HEIGHT = 10.0;
+const FRICTION = 8.0;
 const AIR_CONTROL = 0.3;
 
 class PlayerController {
@@ -74,9 +74,22 @@ class PlayerController {
                 break;
             case 'KeyE':
                 if (this.requestPlaceBlock) {
-                    console.log('E pressed - place block');
                     this.requestPlaceBlock();
                 }
+                break;
+            case 'Digit1':
+            case 'Digit2':
+            case 'Digit3':
+                if (this.onBlockSelect) {
+                    const types = ['grass', 'dirt', 'stone'];
+                    const idx = parseInt(event.code.replace('Digit', '')) - 1;
+                    if (types[idx]) {
+                        this.onBlockSelect(types[idx]);
+                    }
+                }
+                break;
+        }
+    }
                 break;
         }
     }

@@ -104,12 +104,85 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
+
+    #block-selector {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px 20px;
+      border-radius: 8px;
+      z-index: 100;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .block-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid transparent;
+      color: #fff;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .block-option .key {
+      font-size: 10px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .block-option .name {
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .block-option.active {
+      border-color: #4ecdc4;
+      background: rgba(78, 205, 196, 0.2);
+    }
+
+    .block-option .color-preview {
+      width: 24px;
+      height: 24px;
+      border-radius: 3px;
+      margin-top: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .block-option.grass .color-preview { background: #567d46; }
+    .block-option.dirt .color-preview { background: #8B5A2B; }
+    .block-option.stone .color-preview { background: #7A7A7A; }
   </style>
 </head>
 <body>
   <div id="game-container"></div>
 
   <div id="crosshair"></div>
+
+  <div id="block-selector">
+    <div class="block-option grass" data-type="grass">
+      <span class="key">[1]</span>
+      <span class="name">Grass</span>
+      <div class="color-preview"></div>
+    </div>
+    <div class="block-option dirt active" data-type="dirt">
+      <span class="key">[2]</span>
+      <span class="name">Dirt</span>
+      <div class="color-preview"></div>
+    </div>
+    <div class="block-option stone" data-type="stone">
+      <span class="key">[3]</span>
+      <span class="name">Stone</span>
+      <div class="color-preview"></div>
+    </div>
+  </div>
 
   <div id="instructions">
     <h1>Voxel Environment</h1>
@@ -119,6 +192,7 @@
       <div><span>Space</span> - Jump</div>
       <div><span>E</span> - Place block</div>
       <div><span>Q</span> - Destroy block</div>
+      <div><span>1/2/3</span> - Select block type</div>
       <div><span>Mouse</span> - Look around</div>
       <div><span>ESC</span> - Release mouse</div>
     </div>

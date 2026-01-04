@@ -8,6 +8,7 @@ let lastTime = 0;
 let renderer, player, world;
 let blocksMap = new Map();
 let chunksToUpdate = new Set();
+let selectedBlockType = 'dirt';
 
 export function init() {
   if (isRunning) return;
@@ -21,6 +22,12 @@ export function init() {
 
   player.requestPlaceBlock = () => placeBlock();
   player.requestDestroyBlock = () => destroyBlock();
+  player.onBlockSelect = (type) => {
+    selectedBlockType = type;
+    updateBlockSelectorUI();
+  };
+
+  updateBlockSelectorUI();
 
   setupEventListeners();
 
@@ -139,7 +146,7 @@ function placeBlock() {
 
     const chunkX = Math.floor(placePos.x / 16);
     const chunkZ = Math.floor(placePos.z / 16);
-    worldPlaceBlock(placePos.x, placePos.y, placePos.z, 'dirt');
+    worldPlaceBlock(placePos.x, placePos.y, placePos.z, selectedBlockType);
     chunksToUpdate.add(`${chunkX},${chunkZ}`);
     markChunkDirty(chunkX, chunkZ);
   }
@@ -237,4 +244,14 @@ function updateDirtyChunks() {
     }
   });
   chunksToUpdate.clear();
+}
+
+function updateBlockSelectorUI() {
+  const options = document.querySelectorAll('.block-option');
+  options.forEach(opt => {
+    opt.classList.remove('active');
+    if (opt.dataset.type === selectedBlockType) {
+      opt.classList.add('active');
+    }
+  });
 }
