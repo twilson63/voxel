@@ -5,10 +5,84 @@ const CHUNK_SIZE_Y = 64;
 const CHUNK_SIZE_Z = 16;
 const WORLD_HEIGHT = 64;
 const MAX_LOADED_CHUNKS = 50;
+const WATER_LEVEL = 20;
+
+const BLOCK_TYPES = {
+    bedrock: { color: '#1A1A1A', solid: true },
+    grass: { color: '#567d46', solid: true },
+    dirt: { color: '#8B5A2B', solid: true },
+    stone: { color: '#7A7A7A', solid: true },
+    wood: { color: '#5D4037', solid: true },
+    leaves: { color: '#2E7D32', solid: false, transparent: true },
+    water: { color: '#1E88E5', solid: false, transparent: true, opacity: 0.5 }
+};
 
 const chunks = new Map();
 const blocks = new Map();
 let worldSeed = 0;
+
+function generateTree(chunk, worldX, worldZ, groundY) {
+    for (let ty = 1; ty <= 3; ty++) {
+        if (!chunk.hasBlock(worldX, groundY + ty, worldZ)) {
+            chunk.setBlock(worldX, groundY + ty, worldZ, 'wood');
+        }
+    }
+    
+    for (let lx = -1; lx <= 1; lx++) {
+        for (let lz = -1; lz <= 1; lz++) {
+            for (let ly = 0; ly <= 1; ly++) {
+                if (lx === 0 && lz === 0 && ly === 0) continue;
+                if (!chunk.hasBlock(worldX + lx, groundY + 3 + ly, worldZ + lz)) {
+                    chunk.setBlock(worldX + lx, groundY + 3 + ly, worldZ + lz, 'leaves');
+                }
+            }
+        }
+    }
+}
+
+function placeTreesInChunk(chunk, chunkX, chunkZ) {
+    const startX = chunkX * CHUNK_SIZE_X;
+    const startZ = chunkZ * CHUNK_SIZE_Z;
+    const numTrees = Math.floor(Math.random() * 2) + 3;
+    
+    for (let t = 0; t < numTrees; t++) {
+        const localX = Math.floor(Math.random() * CHUNK_SIZE_X);
+        const localZ = Math.floor(Math.random() * CHUNK_SIZE_Z);
+        const worldX = startX + localX;
+        const worldZ = startZ + localZ;
+        const groundY = generateTerrainHeight(worldX, worldZ);
+        
+        if (groundY < WATER_LEVEL - 2) continue;
+        
+        const chunkLocalX = worldX - chunkX * CHUNK_SIZE_X;
+        const chunkLocalZ = worldZ - chunkZ * CHUNK_SIZE_Z;
+        
+        if (!chunk.hasBlock(chunkLocalX, groundY, chunkLocalZ)) {
+            continue;
+        }
+        
+        generateTree(chunk, chunkLocalX, chunkLocalZ, groundY);
+    }
+}
+
+function fillWaterBelowLevel(chunk, chunkX, chunkZ) {
+    const startX = chunkX * CHUNK_SIZE_X;
+    const startZ = chunkZ * CHUNK_SIZE_Z;
+    
+    for (let x = 0; x < CHUNK_SIZE_X; x++) {
+        for (let z = 0; z < CHUNK_SIZE_Z; z++) {
+            const worldX = startX + x;
+            const worldZ = startZ + z;
+            const terrainHeight = generateTerrainHeight(worldX, worldZ);
+            
+            for (let y = 0; y < WATER_LEVEL; y++) {
+                if (!chunk.hasBlock(x, y, z)) {
+                    chunk.setBlock(x, y, z, 'water');
+                }
+            }
+        }
+    }
+}
 
 class Chunk {
     constructor(chunkX, chunkZ) {
@@ -71,7 +145,7 @@ export function generateTerrainHeight(x, z) {
     const noise = createNoise(worldSeed);
     const height = fbm(noise, x, z, DEFAULT_OPTIONS.octaves, DEFAULT_OPTIONS.persistence, DEFAULT_OPTIONS.lacunarity, DEFAULT_OPTIONS.amplitude, DEFAULT_OPTIONS.frequency);
     const normalizedHeight = (height + 1) / 2;
-    const worldHeight = Math.floor(normalizedHeight * 30) + 32;
+    const worldHeight = Math.floor(normalizedHeight * 30) + 8;
     return Math.max(0, Math.min(WORLD_HEIGHT - 1, worldHeight));
 }
 
@@ -101,6 +175,9 @@ function generateChunk(chunkX, chunkZ) {
             }
         }
     }
+
+    placeTreesInChunk(chunk, chunkX, chunkZ);
+    fillWaterBelowLevel(chunk, chunkX, chunkZ);
 
     return chunk;
 }
@@ -209,6 +286,14 @@ export function getAllBlocks() {
     return new Map(blocks);
 }
 
+export function isValidBlockType(type) {
+    return type in BLOCK_TYPES;
+}
+
+export function getBlockType(type) {
+    return BLOCK_TYPES[type] || null;
+}
+
 export function markChunkDirty(chunkX, chunkZ) {
     const chunk = getChunk(chunkX, chunkZ);
     if (chunk) {
@@ -216,4 +301,4 @@ export function markChunkDirty(chunkX, chunkZ) {
     }
 }
 
-export { CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z, WORLD_HEIGHT };
+export { CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z, WORLD_HEIGHT, WATER_LEVEL, BLOCK_TYPES };

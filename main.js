@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createRenderer } from './renderer.js';
 import { createPlayer } from './player.js';
 import { createWorld, loadChunks, getAllBlocks, placeBlock as worldPlaceBlock, destroyBlock as worldDestroyBlock, markChunkDirty, getChunk } from './voxel-world.js';
+import { CloudManager } from './cloud.js';
 
 let isRunning = false;
 let lastTime = 0;
@@ -9,6 +10,8 @@ let renderer, player, world;
 let blocksMap = new Map();
 let chunksToUpdate = new Set();
 let selectedBlockType = 'dirt';
+let cloudManager;
+let lastCloudUpdate = 0;
 
 export function init() {
   if (isRunning) return;
@@ -34,6 +37,8 @@ export function init() {
   loadChunks(0, 0, 2);
   blocksMap = getAllBlocks();
   player.updateBlocks(blocksMap);
+
+  cloudManager = new CloudManager(12345);
 
   const initialChunks = [];
   for (let dx = -2; dx <= 2; dx++) {
@@ -78,6 +83,15 @@ function gameLoop(currentTime) {
 function update(deltaTime) {
   const pos = player.update(deltaTime);
   player.updateBlocks(getAllBlocks());
+
+  if (cloudManager) {
+    cloudManager.updateClouds(deltaTime);
+
+    const chunkX = Math.floor(pos.x / 16);
+    const chunkZ = Math.floor(pos.z / 16);
+    const cloudBlocks = cloudManager.generateClouds(chunkX, chunkZ);
+    renderer.updateClouds(cloudBlocks);
+  }
 
   loadChunks(Math.floor(pos.x / 16), Math.floor(pos.z / 16), 1);
   blocksMap = getAllBlocks();

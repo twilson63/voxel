@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls';
+import { WATER_LEVEL } from './voxel-world.js';
 
 const PLAYER_HEIGHT = 1.8;
 const PLAYER_WIDTH = 0.6;
@@ -9,6 +10,9 @@ const DEFAULT_MOVE_SPEED = 8.0;
 const DEFAULT_JUMP_HEIGHT = 10.0;
 const FRICTION = 8.0;
 const AIR_CONTROL = 0.3;
+const WATER_DRAG = 0.5;
+const SWIMMING_JUMP_HEIGHT = 8.0;
+const BUOYANCY_FORCE = 5.0;
 
 class PlayerController {
     constructor(position, camera, controls) {
@@ -42,6 +46,10 @@ class PlayerController {
         document.addEventListener('keyup', (event) => this._onKeyUp(event));
     }
 
+    isInWater() {
+        return this.position.y < WATER_LEVEL;
+    }
+
     _onKeyDown(event) {
         switch (event.code) {
             case 'KeyW':
@@ -62,7 +70,7 @@ class PlayerController {
                 break;
             case 'Space':
                 if (this.onGround) {
-                    this.velocity.y = this.jumpHeight;
+                    this.velocity.y = this.isInWater() ? SWIMMING_JUMP_HEIGHT : this.jumpHeight;
                     this.onGround = false;
                 }
                 break;
@@ -105,6 +113,19 @@ class PlayerController {
         }
     }
 
+    _applyWaterPhysics() {
+        if (this.isInWater()) {
+            if (this.velocity.y < 0) {
+                this.velocity.y = Math.max(this.velocity.y, -2);
+            } else {
+                this.velocity.y -= BUOYANCY_FORCE * 0.016;
+            }
+
+            this.velocity.x *= WATER_DRAG;
+            this.velocity.z *= WATER_DRAG;
+        }
+    }
+
     updateBlocks(blocks) {
         this.blocks = blocks;
     }
@@ -116,6 +137,7 @@ class PlayerController {
 
         const delta = Math.min(dt, 0.1);
 
+        this._applyWaterPhysics();
         this._applyGravity(delta);
         this._applyFriction(delta);
         this._handleMovement(delta);

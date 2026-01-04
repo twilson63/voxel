@@ -34,6 +34,8 @@ class VoxelRenderer {
 
         this.setupTextureMaterials();
         this.setupEventListeners();
+        this.setupCloudMesh();
+        this.transparentBlocks = [];
 
         window.addEventListener('resize', () => this.onWindowResize());
     }
@@ -44,8 +46,26 @@ class VoxelRenderer {
         this.materials = {
             grass: new THREE.MeshBasicMaterial({ map: textures.grass }),
             dirt: new THREE.MeshBasicMaterial({ map: textures.dirt }),
-            stone: new THREE.MeshBasicMaterial({ map: textures.stone })
+            stone: new THREE.MeshBasicMaterial({ map: textures.stone }),
+            water: new THREE.MeshBasicMaterial({
+                map: textures.water,
+                transparent: true,
+                opacity: 0.5
+            }),
+            wood: new THREE.MeshBasicMaterial({ map: textures.wood }),
+            leaves: new THREE.MeshBasicMaterial({
+                map: textures.leaves,
+                transparent: true,
+                opacity: 0.9
+            }),
+            cloud: new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.9
+            })
         };
+
+        this.transparentTypes = new Set(['water', 'leaves']);
     }
 
     setupEventListeners() {
@@ -56,6 +76,35 @@ class VoxelRenderer {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    setupCloudMesh() {
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = this.materials.cloud;
+
+        this.cloudMesh = new THREE.InstancedMesh(geometry, material, 20000);
+        this.cloudMesh.name = 'instancedMesh_cloud';
+        this.cloudMesh.count = 0;
+        this.cloudMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        this.cloudMesh.renderOrder = 1;
+
+        this.scene.add(this.cloudMesh);
+    }
+
+    updateClouds(cloudBlocks) {
+        if (!this.cloudMesh) return;
+
+        let instanceIndex = 0;
+
+        cloudBlocks.forEach(block => {
+            this.dummy.position.set(block.x, block.y, block.z);
+            this.dummy.updateMatrix();
+            this.cloudMesh.setMatrixAt(instanceIndex, this.dummy.matrix);
+            instanceIndex++;
+        });
+
+        this.cloudMesh.count = instanceIndex;
+        this.cloudMesh.instanceMatrix.needsUpdate = true;
     }
 
     getBlockCountForChunk() {
@@ -71,6 +120,10 @@ class VoxelRenderer {
         mesh.count = 0;
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
+        if (this.transparentTypes.has(blockType)) {
+            mesh.renderOrder = 2;
+        }
+
         return mesh;
     }
 
@@ -85,30 +138,43 @@ class VoxelRenderer {
                 grass: this.createInstancedMesh('grass', this.getBlockCountForChunk()),
                 dirt: this.createInstancedMesh('dirt', this.getBlockCountForChunk()),
                 stone: this.createInstancedMesh('stone', this.getBlockCountForChunk()),
+                water: this.createInstancedMesh('water', this.getBlockCountForChunk()),
+                wood: this.createInstancedMesh('wood', this.getBlockCountForChunk()),
+                leaves: this.createInstancedMesh('leaves', this.getBlockCountForChunk()),
                 positions: {}
             };
 
             this.scene.add(chunkMeshes.grass);
             this.scene.add(chunkMeshes.dirt);
             this.scene.add(chunkMeshes.stone);
+            this.scene.add(chunkMeshes.water);
+            this.scene.add(chunkMeshes.wood);
+            this.scene.add(chunkMeshes.leaves);
 
             this.chunks.set(chunkKey, chunkMeshes);
         }
 
-        const { grass, dirt, stone, positions } = chunkMeshes;
+        const { grass, dirt, stone, water, wood, leaves, positions } = chunkMeshes;
 
-        const instances = { grass: [], dirt: [], stone: [] };
+        const instances = { grass: [], dirt: [], stone: [], water: [], wood: [], leaves: [] };
 
         chunk.blocks.forEach((block, key) => {
             const type = block.type;
             if (instances[type]) {
-                instances[type].push(block);
+                if (type === 'water') {
+                    this.transparentBlocks.push({ block, chunk, mesh: water, positions });
+                } else {
+                    instances[type].push(block);
+                }
             }
         });
 
         this.updateInstancedMesh(grass, instances.grass, chunk, positions, 'grass');
         this.updateInstancedMesh(dirt, instances.dirt, chunk, positions, 'dirt');
         this.updateInstancedMesh(stone, instances.stone, chunk, positions, 'stone');
+        this.updateInstancedMesh(water, instances.water, chunk, positions, 'water');
+        this.updateInstancedMesh(wood, instances.wood, chunk, positions, 'wood');
+        this.updateInstancedMesh(leaves, instances.leaves, chunk, positions, 'leaves');
     }
 
     updateInstancedMesh(mesh, blocks, chunk, positions, blockType) {
@@ -172,7 +238,59 @@ class VoxelRenderer {
     }
 
     render() {
+        this.sortTransparentBlocks();
         this.renderer.render(this.scene, this.camera);
+    }
+
+    sortTransparentBlocks() {
+        if (this.transparentBlocks.length === 0) return;
+
+        const cameraPos = this.camera.position;
+
+        this.transparentBlocks.sort((a, b) => {
+            const posA = new THREE.Vector3(
+                a.chunk.chunkX * CHUNK_SIZE_X + a.block.x,
+                a.block.y,
+                a.chunk.chunkZ * CHUNK_SIZE_Z + a.block.z
+            );
+            const posB = new THREE.Vector3(
+                b.chunk.chunkX * CHUNK_SIZE_X + b.block.x,
+                b.block.y,
+                b.chunk.chunkZ * CHUNK_SIZE_Z + b.block.z
+            );
+
+            const distA = cameraPos.distanceToSquared(posA);
+            const distB = cameraPos.distanceToSquared(posB);
+
+            return distB - distA;
+        });
+
+        let instanceIndex = 0;
+        this.transparentBlocks.forEach(item => {
+            const posKey = `${item.block.x},${item.block.y},${item.block.z}`;
+            item.positions[posKey] = { mesh: item.mesh, index: instanceIndex };
+
+            this.dummy.position.set(
+                item.chunk.chunkX * CHUNK_SIZE_X + item.block.x,
+                item.block.y,
+                item.chunk.chunkZ * CHUNK_SIZE_Z + item.block.z
+            );
+            this.dummy.updateMatrix();
+            item.mesh.setMatrixAt(instanceIndex, this.dummy.matrix);
+            instanceIndex++;
+        });
+
+        this.transparentBlocks.forEach(item => {
+            const posKey = `${item.block.x},${item.block.y},${item.block.z}`;
+            const info = item.positions[posKey];
+            if (info) {
+                item.mesh.count = info.index + 1;
+            }
+        });
+
+        this.transparentBlocks.forEach(item => {
+            item.mesh.instanceMatrix.needsUpdate = true;
+        });
     }
 
     getChunkRenderRadius() {
@@ -212,6 +330,7 @@ export function createRenderer(container) {
         render: () => renderer.render(),
         getChunkRenderRadius: () => renderer.getChunkRenderRadius(),
         getChunkSize: () => renderer.getChunkSize(),
-        dispose: () => renderer.dispose()
+        dispose: () => renderer.dispose(),
+        updateClouds: (cloudBlocks) => renderer.updateClouds(cloudBlocks)
     };
 }
