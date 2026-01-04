@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Environment</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000;
+    }
+
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #crosshair {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    #crosshair::before {
+      width: 2px;
+      height: 20px;
+      left: 9px;
+      top: 0;
+    }
+
+    #crosshair::after {
+      width: 20px;
+      height: 2px;
+      top: 9px;
+      left: 0;
+    }
+
+    #instructions {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      z-index: 200;
+      cursor: pointer;
+    }
+
+    #instructions.hidden {
+      display: none;
+    }
+
+    #instructions h1 {
+      font-size: 3rem;
+      margin-bottom: 2rem;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    #instructions .controls {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1.5rem 2.5rem;
+      border-radius: 8px;
+      line-height: 1.8;
+    }
+
+    #instructions .controls span {
+      color: #4ecdc4;
+      font-weight: bold;
+    }
+
+    #instructions p.click-prompt {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      color: #aaa;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <div id="crosshair"></div>
+
+  <div id="instructions">
+    <h1>Voxel Environment</h1>
+    <div class="controls">
+      <div><span>Click</span> - Enable pointer lock</div>
+      <div><span>WASD</span> - Move forward/back/strafe</div>
+      <div><span>Space</span> - Jump</div>
+      <div><span>E</span> - Place block</div>
+      <div><span>Q</span> - Destroy block</div>
+      <div><span>Mouse</span> - Look around</div>
+      <div><span>ESC</span> - Release mouse</div>
+    </div>
+    <p class="click-prompt">Click anywhere to play</p>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import { init } from './main.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
+    });
+  </script>
+</body>
+</html>
